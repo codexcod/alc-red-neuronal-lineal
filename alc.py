@@ -857,3 +857,111 @@ def svd_reducida(A: np.ndarray, k="max", tol: float = 1e-15):
     return U_hat, Sig_hat, V_hat
 
 
+# ───────────────────────────────────────────────────────────────
+# Utilidades de dataset: carga de embeddings y one-hot targets
+# ───────────────────────────────────────────────────────────────
+import os
+from glob import glob
+
+def cargarDataset(carpeta: str):
+    """
+    Lee embeddings de EfficientNet precomputados y devuelve:
+      Xt, Yt, Xv, Yv
+    Donde cada X tiene forma (n_features, n_muestras) y cada Y (2, n_muestras) con one-hot:
+      - gatos: [1, 0]^T
+      - perros: [0, 1]^T
+    
+    Parámetros:
+      carpeta: ruta al root del dataset que contiene 'train/' y 'val/'.
+               Alternativamente, puede apuntar directamente a 'train/' o 'val/'.
+    
+    Estructura esperada:
+      carpeta/
+        train/
+          cats/efficientnet_b3_embeddings.npy
+          dogs/efficientnet_b3_embeddings.npy
+        val/
+          cats/efficientnet_b3_embeddings.npy
+          dogs/efficientnet_b3_embeddings.npy
+    
+    Retorna:
+      Xt, Yt, Xv, Yv (si no existe alguno de los splits, retorna None en su lugar)
+    """
+    def _carga_split(split_dir: str):
+        if split_dir is None or not os.path.isdir(split_dir):
+            return None, None
+        # Buscar archivos npy dentro de cats/ y dogs/
+        cats_dir = os.path.join(split_dir, "cats")
+        dogs_dir = os.path.join(split_dir, "dogs")
+        # Permitir múltiples .npy; se concatenan por columnas
+        def _load_class_matrix(class_dir: str):
+            if not os.path.isdir(class_dir):
+                return None
+            files = sorted(glob(os.path.join(class_dir, "*.npy")))
+            if not files:
+                return None
+            mats = []
+            for f in files:
+                A = np.load(f)
+                # A debe ser 2D; se asume (features, muestras). Si viene (muestras, features), transponer.
+                if A.ndim != 2:
+                    raise ValueError(f"El archivo {f} no contiene una matriz 2D")
+                # Heurística: si alguna dimensión es 1536 (EfficientNet-B3), tomarla como features (filas).
+                if A.shape[0] == 1536:
+                    M = A
+                elif A.shape[1] == 1536:
+                    M = A.T
+                else:
+                    # Mantener orientación por defecto como (features, muestras)
+                    # En caso de que features sea claramente menor que muestras (poco probable en B3), se invierte
+                    M = A if A.shape[0] != 0 else A
+                mats.append(M)
+            # Concatenar por columnas
+            Xc = mats[0]
+            if len(mats) > 1:
+                Xc = np.concatenate(mats, axis=1)
+            return Xc
+        X_cats = _load_class_matrix(cats_dir)
+        X_dogs = _load_class_matrix(dogs_dir)
+        if X_cats is None and X_dogs is None:
+            return None, None
+        if X_cats is None:
+            X = X_dogs
+            n_d = X_dogs.shape[1]
+            Y = np.vstack([np.zeros((1, n_d)), np.ones((1, n_d))])
+            return X, Y
+        if X_dogs is None:
+            X = X_cats
+            n_c = X_cats.shape[1]
+            Y = np.vstack([np.ones((1, n_c)), np.zeros((1, n_c))])
+            return X, Y
+        # Ambos presentes: concatenar columnas cats || dogs
+        X = np.concatenate([X_cats, X_dogs], axis=1)
+        n_c = X_cats.shape[1]
+        n_d = X_dogs.shape[1]
+        Y_c = np.vstack([np.ones((1, n_c)), np.zeros((1, n_c))])
+        Y_d = np.vstack([np.zeros((1, n_d)), np.ones((1, n_d))])
+        Y = np.concatenate([Y_c, Y_d], axis=1)
+        return X, Y
+
+    carpeta = os.path.abspath(carpeta)
+    base = os.path.basename(carpeta.rstrip(os.sep))
+    has_train = os.path.isdir(os.path.join(carpeta, "train"))
+    has_val = os.path.isdir(os.path.join(carpeta, "val"))
+    Xt = Yt = Xv = Yv = None
+    if has_train or has_val:
+        train_dir = os.path.join(carpeta, "train") if has_train else None
+        val_dir = os.path.join(carpeta, "val") if has_val else None
+        Xt, Yt = _carga_split(train_dir)
+        Xv, Yv = _carga_split(val_dir)
+        return Xt, Yt, Xv, Yv
+    # Si apunta directamente a un split
+    if base.lower() == "train":
+        Xt, Yt = _carga_split(carpeta)
+        return Xt, Yt, None, None
+    if base.lower() == "val" or base.lower() == "valid" or base.lower() == "validation":
+        Xv, Yv = _carga_split(carpeta)
+        return None, None, Xv, Yv
+    # Estructura no reconocida
+    return None, None, None, None
+
