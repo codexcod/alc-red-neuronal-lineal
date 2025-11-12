@@ -44,6 +44,11 @@ python3 tests_svd.py
   - `calculaLDV(A)`: factoriza L D V (a partir de LU).
   - `esSDP(A)`: chequeo simétrica definida positiva (LDLᵗ).
 
+- Cholesky y ecuaciones normales:
+  - `cholesky(A, tol=1e-12)`: descomposición A = L Lᵗ para matrices SPD; retorna L (triangular inferior con diagonal positiva). Valida simetría/SPD y no usa `numpy.linalg.cholesky`.
+  - `solve_cholesky(A, b, tol=1e-12)`: resuelve Ax = b usando A = L Lᵗ (forward/backward con `res_tri`). Requiere A SPD y `b` vector 1D.
+  - `pinvEcuacionesNormales(X, Y, tol=1e-12)`: calcula W que minimiza ||Y − W X||_F² vía ecuaciones normales con Cholesky. Maneja casos delgados/ancho/cuadrado; entradas `X ∈ ℝ^{n×p}`, `Y ∈ ℝ^{m×p}`, salida `W ∈ ℝ^{m×n}`.
+
 - QR:
   - `QR_con_GS(A)`: Gram–Schmidt modificado.
   - `QR_con_HH(A)`: Householder.

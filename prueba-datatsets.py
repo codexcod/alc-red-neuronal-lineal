@@ -1,6 +1,6 @@
 import os
 import numpy as np
-from alc import cargarDataset
+from alc import cargarDataset, pinvEcuacionesNormales
 
 def main():
     # Ruta al split de entrenamiento
@@ -29,6 +29,20 @@ def main():
     # Imprimir una vista simple de las primeras columnas
     print("Primeras 5 etiquetas (columnas):")
     print(Yt[:, :5])
+
+    # Probar pinvEcuacionesNormales: entrenar W en train y evaluar residuo/accuracy en train
+    print("\nEntrenando W con pinvEcuacionesNormales...")
+    W = pinvEcuacionesNormales(Xt, Yt, tol=1e-12)
+    print("W shape:", W.shape)
+    # Residuo en train
+    Y_pred = W @ Xt
+    residuo = np.linalg.norm(Yt - Y_pred, ord="fro")
+    print("||Yt - W Xt||_F:", residuo)
+    # Accuracy en train (argmax por columna)
+    y_true = np.argmax(Yt, axis=0)
+    y_hat = np.argmax(Y_pred, axis=0)
+    acc = np.mean(y_true == y_hat)
+    print("Accuracy (train):", f"{acc*100:.2f}%")
 
 if __name__ == "__main__":
     main()

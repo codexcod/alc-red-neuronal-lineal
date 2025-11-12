@@ -376,7 +376,7 @@ def esSDP(A, atol=1e-8):
             if abs(float(A[i][j]) - float(A[j][i])) > atol:
                 return False
     # LDL^T
-    ldlt = _ldlt(A, atol=1e-12)
+    ldlt = _ldlt(A, atol=atol)
     if ldlt is None:
         return False
     _, D = ldlt
@@ -385,6 +385,224 @@ def esSDP(A, atol=1e-8):
         if D[i][i] <= atol:
             return False
     return True
+
+# ───────────────────────────────────────────────────────────────
+#  Descomposición de Cholesky y resolución asociada
+# ───────────────────────────────────────────────────────────────
+
+def cholesky(A: np.ndarray, tol: float = 1e-12) -> np.ndarray | None:
+    """
+    Factorización de Cholesky: construye L (triangular inferior con diag>0) tal que A = L L^T.
+    
+    Paso 1) Condición necesaria (previo):
+      - A debe ser simétrica: A == A^T (dentro de tolerancia).
+      - A debe ser definida positiva (SPD). En la práctica, si algún pivote de la diagonal
+        (el término bajo la raíz para L_ii) no es estrictamente positivo, no hay factorización.
+    
+    Paso 2) Objetivo de la descomposición:
+      - L con diagonal estrictamente positiva (L_ii > 0).
+      - L es triangular inferior: L_ji = 0 si j < i.
+      - A_ij = sum_{k=1..min(i,j)} L_ik * L_jk, de donde derivan las fórmulas recursivas.
+    
+    Paso 3) Construcción columna por columna (para i = 1..n):
+      - Diagonal:   L_ii = sqrt( A_ii - sum_{k=1..i-1} L_ik^2 )
+                    Si el argumento de sqrt no es > 0, A no era SPD → aborta.
+      - Debajo de diag (misma columna i, para j = i+1..n):
+                    L_ji = ( A_ji - sum_{k=1..i-1} L_jk L_ik ) / L_ii
+    
+    Paso 4) Resolver Ax=b con A=LL^T (sin invertir):
+      - Ly = b  (sustitución hacia adelante)
+      - L^T x = y  (sustitución hacia atrás)
+    
+    Paso 5) Uso en mínimos cuadrados:
+      - Dado X de rango columna completo, G = X^T X es SPD.
+      - Resolver Gβ = X^T y con Cholesky G = L L^T:
+          L z = X^T y,  L^T β = z.
+    
+    Retorna:
+      - L si fue posible factorizar A como SPD, en caso contrario None.
+    
+    Nota: Implementación propia sin usar numpy.linalg.cholesky.
+    """
+    if not isinstance(A, np.ndarray) or A.ndim != 2:
+        raise ValueError("cholesky: A debe ser una matriz numpy 2D.")
+    n, m = A.shape
+    if n != m:
+        raise ValueError("cholesky: A no es cuadrada.")
+    # Paso 1) Chequeo de simetría: A ≈ A^T usando matricesIguales
+    if not matricesIguales(A, A.T):
+        raise ValueError("cholesky: A no es simétrica dentro de la tolerancia indicada.")
+    # Usar función existente para validar SPD antes de factorizar
+    if not esSDP(A, atol=tol):
+        raise ValueError("cholesky: A no es simétrica definida positiva (SPD).")
+    L = np.zeros((n, n), dtype=float)
+    for k in range(n):
+        # Paso 3) Diagonal: L_kk = sqrt( A_kk - sum_{j<k} L_kj^2 )
+        s = 0.0
+        for j in range(k):
+            s += L[k, j] * L[k, j]
+        d = float(A[k, k]) - s
+        # Tolerar pequeños negativos numéricos (ruido de punto flotante)
+        if d < -tol:
+            raise ValueError("cholesky: pivote diagonal negativo (no SPD).")
+        d = 0.0 if d < 0.0 else d
+        Lkk = math.sqrt(d)
+        if Lkk <= tol:
+            # Pivote no positivo → A no era SPD
+            raise ValueError("cholesky: pivote no positivo (no SPD).")
+        L[k, k] = Lkk
+        # Paso 3) Columna k debajo de la diagonal:
+        #         L_ik = ( A_ik - sum_{j<k} L_ij L_kj ) / L_kk,  para i=k+1..n-1
+        for i in range(k + 1, n):
+            s2 = 0.0
+            for j in range(k):
+                s2 += L[i, j] * L[k, j]
+            L[i, k] = (float(A[i, k]) - s2) / Lkk
+    return L
+
+def solve_cholesky(A: np.ndarray, b, tol: float = 1e-12):
+    """
+    Resuelve Ax=b usando A=LL^T por Cholesky:
+      1) Validación SPD con esSDP
+      2) L = cholesky(A)
+      3) Ly = b  (res_tri inferior)
+      4) L^T x = y  (res_tri superior)
+    Retorna x (np.ndarray) o None si falla.
+    """
+    if not isinstance(A, np.ndarray):
+        A = np.array(A, dtype=float)
+    b_np = np.array(b, dtype=float)
+    if not esSDP(A, atol=tol):
+        raise ValueError("solve_cholesky: la matriz A no es simétrica definida positiva (SPD).")
+    L = cholesky(A, tol=tol)
+    if L is None:
+        raise ValueError("solve_cholesky: falló la factorización de Cholesky (revisar tolerancia o rango).")
+    # Resolver solo para un RHS (vector)
+    if b_np.ndim != 1:
+        raise ValueError("solve_cholesky: b no es un vector (se esperaba 1D).")
+    
+    y = res_tri(L, b_np.tolist(), inferior=True)
+    x = res_tri(L.T, y, inferior=False)
+    return np.array(x, dtype=float)
+
+# ───────────────────────────────────────────────────────────────
+#  Ecuaciones normales con Cholesky (Algoritmo 1)
+# ───────────────────────────────────────────────────────────────
+
+def pinvEcuacionesNormales(X: np.ndarray, Y: np.ndarray, tol: float = 1e-12) -> np.ndarray | None:
+    """
+    Calcula W que minimiza ||Y - W X||_F^2 usando ecuaciones normales y Cholesky.
+    Comentado siguiendo los pasos del algoritmo (casos a/b/c).
+
+    Parámetros:
+      - X: matriz de embeddings (n x p), columnas = muestras
+      - Y: matriz de targets (m x p), columnas = one-hot de clases
+      - tol: tolerancia para validaciones numéricas (simetría/SDP)
+
+    Retorna:
+      - W (m x n), o None si falla alguna validación/factorización.
+
+    Notas:
+      - No se usan inversas explícitas salvo en el caso (c) donde n=p (por simplicidad).
+      - Para múltiples RHS, se resuelve columna a columna con res_tri.
+    """
+    if not isinstance(X, np.ndarray) or not isinstance(Y, np.ndarray):
+        X = np.array(X, dtype=float)
+        Y = np.array(Y, dtype=float)
+    n, p = X.shape  # n: features, p: muestras
+    m, pY = Y.shape
+    if pY != p:
+        raise ValueError("pinvEcuacionesNormales: X e Y deben tener igual cantidad de columnas.")
+    print(f"[pinvEcuacionesNormales] Dimensiones: X=(n={n}, p={p}), Y=(m={m}, p={pY})")
+
+    # Paso 0) Selección automática de caso (a/b/c) según dimensiones:
+    #   - n > p  → caso (a): rango columna completo (esperado) → usar G = X^T X
+    #   - n < p  → caso (b): rango fila completo (esperado)    → usar H = X X^T
+    #   - n = p  → caso (c): cuadrada (idealmente invertible)
+
+    # Caso (a) rango(X) = p y n > p:
+    #   X+ = (X^T X)^{-1} X^T
+    #   Resolver (X^T X) U = X^T con Cholesky sobre G = X^T X
+    #   Luego W = Y U
+    if n > p:
+        print("[pinvEcuacionesNormales] Caso (a): n > p → uso G = X^T X (rango columna completo esperado)")
+        # Paso 1) Formar G = X^T X (p x p). (SPD si rango(X)=p).
+        G = X.T @ X
+        print(f"[pinvEcuacionesNormales] Construido G con forma {G.shape}. Factorizando Cholesky...")
+        # Paso 2) Cholesky G = L L^T (valida simetría/SDP internamente)
+        L = cholesky(G, tol=tol)
+        if L is None:
+            raise ValueError("pinvEcuacionesNormales: Cholesky falló para G = X^T X (posible rango columna no completo o tol muy estricta).")
+        print("[pinvEcuacionesNormales] Cholesky(G) OK.")
+        # Paso 3) Resolver (X^T X) U = X^T con forward/backward (por columnas)
+        #         L Z = X^T  y  L^T U = Z
+        U = np.zeros((p, n), dtype=float)
+        XT = X.T  # p x n
+        print(f"[pinvEcuacionesNormales] Resolviendo U columna a columna (total {n})...")
+        step = max(1, n // 20)
+        for j in range(n):
+            # Forward: L z = (X^T)[:, j]
+            z = res_tri(L, XT[:, j].tolist(), inferior=True)
+            # Backward: L^T u = z
+            u = res_tri(L.T, z, inferior=False)
+            U[:, j] = np.array(u, dtype=float)
+            if ((j + 1) % step == 0) or (j + 1 == n):
+                pct = int(round((j + 1) * 100.0 / n))
+                print(f"[pinvEcuacionesNormales] Progreso U: {pct}% ({j+1}/{n})")
+        # Paso 4) W = Y U
+        print("[pinvEcuacionesNormales] Construyendo W = Y U ...")
+        W = Y @ U
+        print("[pinvEcuacionesNormales] Listo (caso a).")
+        return W
+
+    # Caso (b) rango(X) = n y n < p:
+    #   X+ = X^T (X X^T)^{-1}
+    #   Resolver V (X X^T) = X^T → transponiendo: (X X^T) V^T = X
+    #   Con Cholesky sobre H = X X^T
+    #   Luego W = Y V
+    if n < p:
+        print("[pinvEcuacionesNormales] Caso (b): n < p → uso H = X X^T (rango fila completo esperado)")
+        # Paso 1) Formar H = X X^T (n x n). (SPD si rango(X)=n).
+        H = X @ X.T
+        print(f"[pinvEcuacionesNormales] Construido H con forma {H.shape}. Factorizando Cholesky...")
+        # Paso 2) Cholesky H = L L^T (valida simetría/SDP internamente)
+        L = cholesky(H, tol=tol)
+        if L is None:
+            raise ValueError("pinvEcuacionesNormales: Cholesky falló para H = X X^T (posible rango fila no completo o tol muy estricta).")
+        print("[pinvEcuacionesNormales] Cholesky(H) OK.")
+        # Paso 3) Resolver (X X^T) V^T = X → L Z = X ; L^T V^T = Z
+        VT = np.zeros((n, p), dtype=float)  # V^T es n x p
+        print(f"[pinvEcuacionesNormales] Resolviendo V^T columna a columna (total {p})...")
+        step = max(1, p // 20)
+        for j in range(p):
+            # Forward: L z = X[:, j]
+            z = res_tri(L, X[:, j].tolist(), inferior=True)
+            # Backward: L^T v = z
+            v = res_tri(L.T, z, inferior=False)
+            VT[:, j] = np.array(v, dtype=float)
+            if ((j + 1) % step == 0) or (j + 1 == p):
+                pct = int(round((j + 1) * 100.0 / p))
+                print(f"[pinvEcuacionesNormales] Progreso V^T: {pct}% ({j+1}/{p})")
+        V = VT.T  # p x n
+        # Paso 4) W = Y V
+        print("[pinvEcuacionesNormales] Construyendo W = Y V ...")
+        W = Y @ V
+        print("[pinvEcuacionesNormales] Listo (caso b).")
+        return W
+
+    # Caso (c) n = p (matriz cuadrada). Idealmente X invertible:
+    #   X+ = X^{-1}
+    #   Resolver W X = Y → W = Y X^{-1}
+    if n == p:
+        print("[pinvEcuacionesNormales] Caso (c): n = p → uso X^{-1} (si es invertible)")
+        Xinv = inversa(X)
+        if Xinv is None:
+            raise ValueError("pinvEcuacionesNormales: X no es invertible en el caso cuadrado (n = p).")
+        Xinv_np = np.array(Xinv, dtype=float)
+        print("[pinvEcuacionesNormales] Construyendo W = Y X^{-1} ...")
+        W = Y @ Xinv_np
+        print("[pinvEcuacionesNormales] Listo (caso c).")
+        return W
 
 # ──────────────────────────────────────────────────────────────────────────────
 #  Factorización QR (Gram-Schmidt y Householder) sin usar @ / np.matmul
@@ -822,19 +1040,6 @@ def multiplica_rala_vector(A_rala, v: np.ndarray) -> np.ndarray:
 # ───────────────────────────────────────────────────────────────
 # L08 - SVD reducida (sin usar @ / np.matmul)
 # ───────────────────────────────────────────────────────────────
-
-def _AtA(A: np.ndarray) -> np.ndarray:
-    """Construye G = A^T A sin usar @/matmul."""
-    m, n = A.shape
-    G = np.zeros((n, n), dtype=float)
-    for i in range(n):
-        for j in range(n):
-            s = 0.0
-            for k in range(m):
-                s += float(A[k, i]) * float(A[k, j])
-            G[i, j] = s
-    return G
-
 
 def svd_reducida(A: np.ndarray, k="max", tol: float = 1e-15):
     """
