@@ -13,7 +13,7 @@ def calculaLU(A):
 
     for k in range(n-1):
         pivote = Ac[k, k]
-        if pivote == 0:
+        if abs(pivote) < 1e-12:
             print("Pivote nulo")
             return None, None, 0
         
@@ -173,11 +173,11 @@ def calculaLDV(A):
     L = calculaLU(A)[0]   
     U = calculaLU(A)[1]
     
-    L2 = calculaLU(traspuesta(U))[0]
-    U2 = calculaLU(traspuesta(U))[1]
+    L2 = calculaLU(traspuesta(U))[0] #V traspuesta
+    U2 = calculaLU(traspuesta(U))[1] #D
     
-    D = traspuesta(U2)
-    V = traspuesta(L2)
+    D = traspuesta(U2) #Diagonal (no cambia)
+    V = traspuesta(L2) #Traspuesta de V traspuesta (queda V)
     
     return L, D, V
 
@@ -207,12 +207,23 @@ def esSDP(A, atol=1e-8):
     
     return True
 
+def calculaCholesky(A, atol=1e-8):
+    if not esSDP(A, atol) : print("La matriz no es SDP"); return None
+
+    D = calculaLDV(A)[1]
+    L = calculaLDV(A)[0]
+
+    D_sqrt = dividirDiagonal(D)
+
+    L_chol = productoMatricial(L, D_sqrt) 
+
+    return L_chol
+   
+def dividirDiagonal(D):
+    n = D.shape[0]
+    D_sqrt  = np.zeros((n,n))
     
-    
-    
-    
-    
-    
-    
+    for i in range(n):
+        D_sqrt[i,i] = np.sqrt(D[i,i])
         
-    
+    return D_sqrt   

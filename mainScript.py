@@ -1,6 +1,7 @@
 import numpy as np
 import moduloALC as alc
 
+
 # 1. Lectura de Datos 
 
 #Dentro de cats_and_dogs, tenemos train y val, dentro de cada una una carpeta para "cats" y "dogs"
@@ -10,8 +11,8 @@ ruta = ""  #Aca va el path donde tengas guardado "cats_and_dogs"
 
 def cargarDataset(carpeta):
     
-    #Cargamos los embeedings de entrenamiento, np.load lee el archivo .npy
-    #Cada archivo contiene una matriz de embeedings, donde cada columna es un embedding
+    #Cargamos los embeddings de entrenamiento, np.load lee el archivo .npy
+    #Cada archivo contiene una matriz de embeddings, donde cada columna es un embedding
     
     #---Parte de TRAIN---
     cats_train = np.load(carpeta + "/train/cats/efficientnet_b3_embeddings.npy")
@@ -60,10 +61,86 @@ print("Xv", Xv.shape)   # -> Xv (1536, 1000)
 print("Yv", Yv.shape)   # -> Yv (2, 1000)
 
 #Por enunciado: "El set completo contiene 3.000 imagenes de entrenamiento y 2.000 imagenes de test o validacion."
-#Como los archivos tienen el mismo tamanio para perro y gato, asumimos que esta bien que como hay 2000 en train, son 1000 gatos y 1000 perros
+#Como los archivos tienen el mismo tamaño para perro y gato, asumimos que esta bien que como hay 2000 en train, son 1000 gatos y 1000 perros
 #luego en validacion quedan los otros 1000, que son 500/500 
 
-# 2.
+
+
+# ---------------------------------------------------------------------------------------
+
+
+# 2. Ecuaciones normales:
+
+#Resumen:
+    #Para resolver el problema minW ||Y - WX||^2 , donde X es la matriz de embeddings y Y la matriz de etiquetas
+    #usamos la pseudoinversa de X, que se define como X+ = (XtX)^(-1) Xt si n > p o X+ = Xt (XXt)^(-1) si n < p
+    #si n = p, X+ = X^(-1)
+
+    #donde n = dim embeddings, p = num ejemplos
+
+#Luego la solucion W es W = Y X+
+#Vamos a aprovechar la factorizacion de Cholesky con L triangular para resolver varios sistemas
+#No seria conveniente calcular la inversa directamente ya que tomaria mucho tiempo y puede ser inestable numericamente 
+
+def pinvEcuacionesNormales(X, _, Y):        #Recibe X, L y Y, devuelve W solucion del problema minW ||Y - WX||^2
+    n = X.shape[0]
+    p = X.shape[1]
+        
+    if n > p: #caso n > p
+        #Queremos resolver el sistema (XtX) U = Xt usando la factorizacion de Cholesky XtX = LLt
+        #nos queda el sistema LLt U = Xt. Llamo Z = Lt U
+        #primero resolvemos L Z = Xt con sustitucion adelante (L es triangular inferior)
+        #Cada columna de Z es resultado de resolver L zi = xi (xi es columna de Xt)
+
+        L = alc.calculaCholesky(alc.productoMatricial(alc.traspuesta(X), X))
+
+
+        Z = resolver_sistema_matricial(L,alc.traspuesta(X))   
+
+        #luego resolvemos Lt U = Z con sustitucion atras (Lt es triangular superior) donde U es la pseudoinversa de X
+
+        U = resolver_sistema_matricial(alc.traspuesta(L),Z)
+
+        #Finalmente calculamos W = Y U donde U es la pseudoinversa 
+        W = alc.productoMatricial(Y, U)   # WX = Y  -> W = Y @ X+
+        
+        return W
+    
+    if n < p:   #caso n < p 
+        #Queremos resolver el sistema V(XXt) = Xt usando la factorizacion de Cholesky XXt = LLt
+        #nos queda el sistema V LLt = Xt. Si transponemos queda LLt Vt = Xt. Llamo Z = Lt Vt 
+        #primero resolvemos L Z = Xt con sustitucion adelante (L es triangular inferior)
+        #Cada columna de Z es resultado de resolver L zi = xi (xi es columna de Xt) 
+
+        L = alc.calculaCholesky(alc.productoMatricial(X , alc.traspuesta(X))) 
+        Z = resolver_sistema_matricial(L, alc.traspuesta(X))
+
+        #luego resolvemos Lt Vt = Z con sustitucion atras (Lt es triangular superior) donde Vt es la pseudoinversa de X transpuesta
+        
+        Vt = resolver_sistema_matricial(alc.traspuesta(L), Z)
+        U = alc.traspuesta(Vt)   #pseudoinversa de X
+
+        #Finalmente calculamos W = Y U donde U es la pseudoinversa
+        W = alc.productoMatricial(Y, U)    
+
+        return W
+    
+    if n == p:   #caso n = p:
+        X_inv = alc.inversa(X)
+        W = alc.productoMatricial(Y, X_inv)
+        return W
+    
+
+
+def resolver_sistema_matricial(L, B):           #Crea una matriz Z solucion del sistema columna a columna, resolviendo L zi = bi en cada paso (L debe ser triangular)
+    Z = np.zeros((L.shape[0], B.shape[1]))
+    for i in range(B.shape[1]):
+        Z[:, i] = alc.res_tri(L, B[:, i])
+    return Z
+
+
+#--------------------------------------------------------------------------------
+
 
 # 3. Descomposicion en Valores singulares  
 
@@ -114,9 +191,9 @@ U, S, Vt = alc.svd_reducida(X)
 
 W = pinvSVD(U, S, Vt, Y)
 
-print("W =", W)
+# print("W =", W)
 
 Y_approx = W @ X    # si quisiesemos recuperar Y con WX, quiero ver que tanto se parece a la Y original
-print("Y_approx =\n", Y_approx)
-print("Error =\n", Y_approx - Y)
+# print("Y_approx =\n", Y_approx)
+# print("Error =\n", Y_approx - Y)
 
