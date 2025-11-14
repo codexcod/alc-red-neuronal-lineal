@@ -6,7 +6,7 @@ import moduloALC as alc
 #Dentro de cats_and_dogs, tenemos train y val, dentro de cada una una carpeta para "cats" y "dogs"
 #cada una de estas, contiene un archivo .npy que es la matriz que queremos
 
-ruta = "C:/Users/Lau/Desktop/ALC/TP/cats_and_dogs"  #Aca va el path donde tengas guardado "cats_and_dogs"
+ruta = ""  #Aca va el path donde tengas guardado "cats_and_dogs"
 
 def cargarDataset(carpeta):
     
@@ -119,3 +119,4 @@ print("W =", W)
 Y_approx = W @ X    # si quisiesemos recuperar Y con WX, quiero ver que tanto se parece a la Y original
 print("Y_approx =\n", Y_approx)
 print("Error =\n", Y_approx - Y)
+
