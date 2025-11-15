@@ -197,3 +197,62 @@ Y_approx = W @ X    # si quisiesemos recuperar Y con WX, quiero ver que tanto se
 # print("Y_approx =\n", Y_approx)
 # print("Error =\n", Y_approx - Y)
 
+
+
+#--------------------------------------------------------------------------------
+
+
+# 4. POR HACER
+
+
+#--------------------------------------------------------------------------------
+
+
+#5. Pseudo-Inversa de Moore-Penrose
+
+#Resumen:
+    #El objetivo aca es: dadas dos matrices X y pX (una pseudo-Inversa de X) , decidir si cumplen las condiciones de Moore-Penrose, 
+    #con una determinada tolerancia. Para que esto suceda, se deben cumplir las siguientes propiedades:
+        #I)   X @ X+ @ X = X
+        #II)  X+ @ X @ X+ = X+
+        #III) (X @ X+)^t = X @ X+
+        #IV)  (X+ @ X)^t = X+ @ X
+
+#Para ello, realizamos una funcion que verifica si todas las propiedades se cumplen y devuelve un valor booleano
+
+def esPseudoInversa(X, pX, tol=1e-7):
+    
+    m, n = X.shape   #Si X es de tamaño m × n
+
+    #La pseudo-inversa de MP debe ser de tamanio n × m
+    if (n, m) != pX.shape:
+        return False
+
+    #Propiedad I)
+    X_aprox = alc.productoMatricial(        #calculamos el producto que corresponde
+        alc.productoMatricial(X,pX) , X
+    )
+
+    if not alc.SonMatricesIguales(X_aprox,X,tol):   #Esta funcion compara si las matices son "iguales" con determinada tolerancia
+        return False
+
+    #Propiedad II)  misma idea que con la propiedad I
+    pX_aprox = alc.productoMatricial(
+        alc.productoMatricial(pX,X) , pX
+    )
+    
+    if not alc.SonMatricesIguales(pX_aprox,pX,tol):
+        return False
+    
+    #Propiedad III) y IV), aca basta con chequear si las pseudo-Identidades de nxn y mxm, son simetricas, siempre con la tolerancia pedida
+    pseudo_I = alc.productoMatricial(X,pX)
+    
+    if not alc.esSimetrica(pseudo_I,tol):
+        return False
+    
+    pseudo_I_2 = alc.productoMatricial(pX,X)
+    
+    if not alc.esSimetrica(pseudo_I_2,tol):
+        return False
+    
+    return True
