@@ -213,10 +213,10 @@ Y_approx = W @ X    # si quisiesemos recuperar Y con WX, quiero ver que tanto se
 #Resumen:
     #El objetivo aca es: dadas dos matrices X y pX (una pseudo-Inversa de X) , decidir si cumplen las condiciones de Moore-Penrose, 
     #con una determinada tolerancia. Para que esto suceda, se deben cumplir las siguientes propiedades:
-        #I)   X @ X+ @ X = X
-        #II)  X+ @ X @ X+ = X+
-        #III) (X @ X+)^t = X @ X+
-        #IV)  (X+ @ X)^t = X+ @ X
+        #I)   X @ pX @ X = X
+        #II)  pX @ X @ pX = pX
+        #III) (X @ pX)^t = X @ pX
+        #IV)  (pX @ X)^t = pX @ X
 
 #Para ello, realizamos una funcion que verifica si todas las propiedades se cumplen y devuelve un valor booleano
 
@@ -256,3 +256,4 @@ def esPseudoInversa(X, pX, tol=1e-7):
         return False
     
     return True
+
