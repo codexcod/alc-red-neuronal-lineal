@@ -218,7 +218,7 @@ Y_approx = W @ X    # si quisiesemos recuperar Y con WX, quiero ver que tanto se
         #III) (X @ pX)^t = X @ pX
         #IV)  (pX @ X)^t = pX @ X
 
-#Para ello, realizamos una funcion que verifica si todas las propiedades se cumplen y devuelve un valor booleano
+#Para ello, realizamos una funcion que devuelve un valor booleano, la misma verifica si todas las propiedades se cumplen y, en caso afirmativo retorna True.
 
 def esPseudoInversa(X, pX, tol=1e-7):
     
@@ -256,4 +256,5 @@ def esPseudoInversa(X, pX, tol=1e-7):
         return False
     
     return True
+
 
