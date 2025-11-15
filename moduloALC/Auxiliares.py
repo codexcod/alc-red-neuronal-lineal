@@ -20,3 +20,18 @@ def concatenaColumnas(A, B):
         R[:, rango + j] = B[:, j]
 
     return R
+    
+
+#Funcion para decidir si dos matrices son iguales con determinada tolerancia
+def SonMatricesIguales(A,B,tol=1e-6):   
+    m,n = A.shape
+    
+    if A.shape != B.shape : return False
+    
+    M = A - B
+    
+    for i in range(m):
+        for j in range(n):
+            if abs(M[i][j]) > tol : return False
+    
+    return True
