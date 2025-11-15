@@ -1,4 +1,5 @@
 from .LABO1 import *
+from .LABO2 import *
 from .LABO3 import *
 from .LABO4 import *
 from .LABO5 import *
