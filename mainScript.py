@@ -202,7 +202,65 @@ Y_approx = W @ X    # si quisiesemos recuperar Y con WX, quiero ver que tanto se
 #--------------------------------------------------------------------------------
 
 
-# 4. POR HACER
+# 4. Descomposicion QR
+
+#Queremos ahora calcular los pesos W a traves de la factorizacion QR, obteniendo la misma en un caso con GramSmidth y en otro con HouseHolder
+#para hallar W seguimos el algoritmo 3
+
+#En el requerimiento del algoritmo: "Dada X ∈ Rn×p y Y ∈ Rm×p"
+#y como sabemos que X ∈ Rn×p con n < p, rango(X) = n (rango completo), esto quiere decir como en los anteriores casos que X tiene muchas columnas y menos filas
+#pero estas ultimas son linealmente independientes, luego esto garantiza que X @ X.T es inversible, podemos entonces escribir X+ = X.T @ (X @ X.T)^-1
+
+#Las siguientes funciones calculan W usando la factorizacion 
+
+#Aca la Q y R vendrian de alc.QR_con_GS_MatRectangular( alc.traspuesta(X) )
+
+def pinvGramSchmidt(Q, R, Y):
+    
+    #Aca tenemos que X+ = (QR) @ (R.T @ Q.T) @ (QR)−1 = Q @ (R.T)−1, entonces si multiplicamos a derecha por R.T
+    #nos queda X+ @ R.T = Q, si renombramos X+ = V , buscamos V dado por V @ R.T = Q, pero necesitamos "acomodar V", 
+    #si trasponemos, (V @ R.T).T = Q.T, luego lo que necesitamos resolver es R @ V.T = Q.T
+    #Esto es un sistema matricial triangular superior
+
+    Qt = alc.traspuesta(Q)
+    Vt = alc.res_tri_sup_mat(R, Qt)     #La explicacion de esta funcion esta en "Auxiliares.py"
+
+    #Trasponemos para recuperar V
+    V = alc.traspuesta(Vt)
+
+    #Luego:
+    W = alc.productoMatricial(Y , V)
+
+    return W
+    
+    
+#Ahora Q, R viene de alc.QR_con_HH( alc.traspuesta(X) )
+#Aca hay un problema pues QR_con_HH para matrices rectangulares devuelve una R que no es cuadrada, por lo que para trabajar con ella tenemos que
+#reducirla y tomar la parte cuadrada util, por lo tanto tambien recortar Q
+
+def pinvHouseHolder(Q, R, Y):
+    
+    #dimensiones
+    mQ, _ = Q.shape
+    mR, nR = R.shape  
+
+    #La parte superior cuadrada util de R es
+    R_util = R[:nR, :nR]  
+
+    #Ahora necesitamos Q_util que son las primeras nR columnas de Q
+    Q_util = Q[:, :nR]      
+
+    Qt = alc.traspuesta(Q_util) 
+
+    #Luego como antes resolvemos el sistema triangular superior R_util @ Vt = Qt
+    Vt = alc.res_tri_sup_mat(R_util, Qt)
+
+    V = alc.traspuesta(Vt)
+
+    W = alc.productoMatricial(Y, V)
+
+    return W
+
 
 
 #--------------------------------------------------------------------------------
@@ -256,5 +314,6 @@ def esPseudoInversa(X, pX, tol=1e-7):
         return False
     
     return True
+
 
 
