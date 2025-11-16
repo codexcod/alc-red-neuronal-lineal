@@ -1,4 +1,6 @@
 import numpy as np
+import moduloALC.LABO3 as LABO3
+import moduloALC.LABO5 as LABO5
 
 #Funcion auxiliar que concatena dos matrices que tienen misma cantidad de filas
 #es decir "pega" una al lado de la otra
