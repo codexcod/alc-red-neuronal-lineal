@@ -41,6 +41,22 @@ def SonMatricesIguales(A,B,tol=1e-6):
 
 
 
+#La manera de resolver AX=B para X, donde A,B Y X son matrices se puede ver con multiplicacion por bloques: (Ax1 | Ax2 ... | Axn) = (b1 | b2 ... | bn),
+#entonces solo queda resolver individualmente Axi=bi donde xi y bi son vectores columnas, y ya tenemos una funcion para eso, si A es triangular superior
+def res_tri_sup_mat(U, B):
+    n, m = B.shape
+    
+    X = np.zeros((n, m))
+
+    for j in range(m):
+        X[:, j] = LABO4.res_tri_sup(U, B[:, j])
+
+    return X
+
+
+
+
+
 #Esta funcion es necesaria para el punto 4 del TP, necesitamos eliminar la restriccion de m==n
 def QR_con_GS_MatRectangular(A, tol=1e-12, nops=False):
     m, n = A.shape
