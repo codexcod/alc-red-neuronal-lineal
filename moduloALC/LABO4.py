@@ -1,4 +1,5 @@
 import numpy as np
+from .LABO6 import productoMatricial
 
 def calculaLU(A):
     if A is None : return None, None, 0
