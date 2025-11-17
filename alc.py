@@ -1059,12 +1059,12 @@ def pinvEcuacionesNormales(X, _, Y):        #Recibe X, L y Y, devuelve W solucio
     
     if n < p:   #caso n < p 
         #Queremos resolver el sistema V(XXt) = Xt usando la factorizacion de Cholesky XXt = LLt
-        #nos queda el sistema V LLt = Xt. Si transponemos queda LLt Vt = Xt. Llamo Z = Lt Vt 
-        #primero resolvemos L Z = Xt con sustitucion adelante (L es triangular inferior)
+        #nos queda el sistema V LLt = X. Si transponemos queda LLt Vt = Xt. Llamo Z = Lt Vt 
+        #primero resolvemos L Z = X con sustitucion adelante (L es triangular inferior)
         #Cada columna de Z es resultado de resolver L zi = xi (xi es columna de Xt) 
 
         L = calculaCholesky(productoMatricial(X , traspuesta(X))) 
-        Z = res_tri_mat(L, traspuesta(X))
+        Z = res_tri_mat(L, X)
 
         #luego resolvemos Lt Vt = Z con sustitucion atras (Lt es triangular superior) donde Vt es la pseudoinversa de X transpuesta
         
@@ -1138,7 +1138,7 @@ def pinvGramSchmidt(Q, R, Y):
     #Esto es un sistema matricial triangular superior
 
     Qt = traspuesta(Q)
-    Vt = res_tri_mat(R, Qt)     #La explicacion de esta funcion esta en "Auxiliares.py"
+    Vt = res_tri_sup_mat(R, Qt)     #La explicacion de esta funcion esta en "Auxiliares.py"
 
     #Trasponemos para recuperar V
     V = traspuesta(Vt)
@@ -1168,7 +1168,7 @@ def pinvHouseHolder(Q, R, Y):
     Qt = traspuesta(Q_util) 
 
     #Luego como antes resolvemos el sistema triangular superior R_util @ Vt = Qt
-    Vt = res_tri_mat(R_util, Qt)
+    Vt = res_tri_sup_mat(R_util, Qt)
 
     V = traspuesta(Vt)
 
