@@ -255,7 +255,19 @@ def condMC(A, p):
 
     return float(nA) * float(ninvA)
 
-#def condExacto(A, p):
+
+def condExacto(A, p):
+    """κ_p(A) exacto para p in {1, 'inf'}; para otros p, usa Monte Carlo."""
+    if p == 1 or p == 'inf':
+        nA1, nAinf = normaExacta(A)
+        Ain = inversa(A)
+        nAinv1, nAinfinf = normaExacta(Ain)
+        if p == 1:
+            return nA1 * nAinv1
+        else:
+            return nAinf * nAinfinf
+    # fallback MC
+    return condMC(A, p)
     
 
 # ------------------------------
@@ -963,6 +975,98 @@ def QR_con_GS_MatRectangular(A, tol=1e-12, nops=False):
         return Q, R, operaciones
     else:
         return Q, R
+
+def aumentar_numero_condicion(
+    X: np.ndarray,
+    Y: np.ndarray,
+    metodo: str = 'duplicar_columnas',
+    n_duplicados: int | None = None,
+    fraccion: float = 0.1,
+    ruido_rel: float = 1e-3,
+    semilla: int | None = None,
+    pares_dependencias: int = 1,
+    modo: str = 'reemplazar',  # 'reemplazar' (mantiene p), 'extender' (agrega columnas)
+):
+    """
+    Aumenta el número de condición de X (y ajusta Y si corresponde) mediante dos estrategias:
+    - 'duplicar_columnas': agrega columnas casi iguales a algunas existentes (muestras casi repetidas).
+    - 'dependencia_filas': fuerza que algunas filas (features) queden casi linealmente dependientes.
+
+    Parámetros
+    - X: matriz de entrenamiento de tamaño (n_features, n_muestras)
+    - Y: etiquetas one-hot de tamaño (n_clases, n_muestras)
+    - metodo: 'duplicar_columnas' | 'dependencia_filas'
+    - n_duplicados: cantidad de columnas a duplicar (si None, usa fraccion)
+    - fraccion: fracción de columnas a duplicar cuando n_duplicados es None
+    - ruido_rel: tamaño relativo del ruido/perturbación para hacer "casi" iguales/dependientes
+    - semilla: semilla para la aleatoriedad
+    - pares_dependencias: cantidad de pares de filas a volver casi dependientes (solo en 'dependencia_filas')
+
+    Retorna
+    - (X_mod, Y_mod): matrices modificadas
+    """
+    assert X.shape[1] == Y.shape[1], "X e Y deben tener igual cantidad de columnas (muestras)"
+
+    rng = np.random.default_rng(semilla) if semilla is not None else np.random.default_rng()
+
+    if metodo == 'duplicar_columnas':
+        n, p = X.shape
+        if n_duplicados is None:
+            n_duplicados = max(1, int(np.ceil(fraccion * p)))
+        n_duplicados = max(1, int(n_duplicados))
+        n_duplicados = min(n_duplicados, p)
+
+        if modo == 'extender':
+            # Agrega columnas nuevas casi iguales (puede volver singular XtX cuando n > p)
+            idx = rng.choice(p, size=n_duplicados, replace=False)
+            escalas = 1.0 + ruido_rel * rng.standard_normal((1, n_duplicados))
+            X_casi = X[:, idx] * escalas
+            Y_casi = Y[:, idx]
+            X_mod = np.hstack([X, X_casi])
+            Y_mod = np.hstack([Y, Y_casi])
+            return X_mod, Y_mod
+        else:
+            # Reemplaza algunas columnas por copias casi iguales de otras columnas (mantiene p y evita singularidades)
+            X_mod = X.copy()
+            cols_a_modificar = rng.choice(p, size=n_duplicados, replace=False)
+            for j in cols_a_modificar:
+                # Elegimos una columna ancla distinta de j
+                candidatos = np.array([c for c in range(p) if c != j])
+                # Preferimos anclas con la misma etiqueta para no introducir contradicciones
+                try:
+                    clase_j = int(np.argmax(Y[:, j]))
+                    candidatos_misma_clase = np.array([c for c in candidatos if int(np.argmax(Y[:, c])) == clase_j])
+                except Exception:
+                    candidatos_misma_clase = np.array([])
+                if candidatos_misma_clase.size > 0:
+                    k = int(rng.choice(candidatos_misma_clase, size=1))
+                else:
+                    k = int(rng.choice(candidatos, size=1))
+                base = X[:, k].copy()
+                # Ruido multiplicativo + pequeño ruido aditivo relativo a la escala de la columna
+                escala = 1.0 + ruido_rel * rng.standard_normal()
+                sigma = np.std(base) if np.std(base) > 0 else 1.0
+                pert = ruido_rel * sigma * rng.standard_normal(n)
+                X_mod[:, j] = escala * base + pert
+            return X_mod, Y
+
+    elif metodo == 'dependencia_filas':
+        n, p = X.shape
+        if n < 2:
+            return X.copy(), Y
+
+        X_mod = X.copy()
+        num_pares = max(1, int(pares_dependencias))
+        for _ in range(num_pares):
+            i, j = rng.choice(n, size=2, replace=False)
+            # Hacemos la fila j ~ fila i con pequeña perturbación aditiva
+            escala_ruido = np.std(X_mod[i, :]) if np.std(X_mod[i, :]) > 0 else 1.0
+            X_mod[j, :] = X_mod[i, :] + ruido_rel * escala_ruido * rng.standard_normal(p)
+
+        return X_mod, Y
+
+    else:
+        raise ValueError("metodo debe ser 'duplicar_columnas' o 'dependencia_filas'")
 
 
 # ------------------------------
