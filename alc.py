@@ -913,13 +913,10 @@ def SonMatricesIguales(A,B,tol=1e-6):
 #La manera de resolver AX=B para X, donde A,B Y X son matrices se puede ver con multiplicacion por bloques: (Ax1 | Ax2 ... | Axn) = (b1 | b2 ... | bn),
 #entonces solo queda resolver individualmente Axi=bi donde xi y bi son vectores columnas, y ya tenemos una funcion para eso, si A es triangular superior
 def res_tri_sup_mat(U, B):
-    n, m = B.shape
-    
-    X = np.zeros((n, m))
-
-    for j in range(m):
-        X[:, j] = res_tri_sup(U, B[:, j])
-
+    n, k = B.shape
+    X = np.zeros((n, k))
+    for i in reversed(range(n)):
+        X[i, :] = (B[i, :] - U[i, i+1:] @ X[i+1:, :]) / U[i, i]
     return X
 
 def res_tri_mat(U, B):
