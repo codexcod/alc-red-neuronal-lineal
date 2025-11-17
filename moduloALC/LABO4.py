@@ -219,6 +219,18 @@ def calculaCholesky(A, atol=1e-8):
     L_chol = productoMatricial(L, D_sqrt) 
 
     return L_chol
+
+def calculaCholeskyOP(A, atol=1e-8):
+    if not esSDP(A, atol) : print("La matriz no es SDP"); return None
+
+    D = calculaLDV(A)[1]
+    L = calculaLDV(A)[0]
+
+    D_sqrt = dividirDiagonal(D)
+
+    L_chol = L @ D_sqrt
+
+    return L_chol
    
 def dividirDiagonal(D):
     n = D.shape[0]

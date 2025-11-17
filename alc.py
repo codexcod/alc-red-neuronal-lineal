@@ -922,6 +922,15 @@ def res_tri_sup_mat(U, B):
 
     return X
 
+def res_tri_mat(U, B):
+    n, m = B.shape
+    
+    X = np.zeros((n, m))
+
+    for j in range(m):
+        X[:, j] = res_tri(U, B[:, j])
+
+    return X
 
 
 
@@ -1040,11 +1049,11 @@ def pinvEcuacionesNormales(X, _, Y):        #Recibe X, L y Y, devuelve W solucio
         L = calculaCholesky(productoMatricial(traspuesta(X), X))
 
 
-        Z = resolver_sistema_matricial(L,traspuesta(X))   
+        Z = res_tri_mat(L,traspuesta(X))   
 
         #luego resolvemos Lt U = Z con sustitucion atras (Lt es triangular superior) donde U es la pseudoinversa de X
 
-        U = resolver_sistema_matricial(traspuesta(L),Z)
+        U = res_tri_mat(traspuesta(L),Z)
 
         #Finalmente calculamos W = Y U donde U es la pseudoinversa 
         W = productoMatricial(Y, U)   # WX = Y  -> W = Y @ X+
@@ -1058,11 +1067,11 @@ def pinvEcuacionesNormales(X, _, Y):        #Recibe X, L y Y, devuelve W solucio
         #Cada columna de Z es resultado de resolver L zi = xi (xi es columna de Xt) 
 
         L = calculaCholesky(productoMatricial(X , traspuesta(X))) 
-        Z = resolver_sistema_matricial(L, traspuesta(X))
+        Z = res_tri_mat(L, traspuesta(X))
 
         #luego resolvemos Lt Vt = Z con sustitucion atras (Lt es triangular superior) donde Vt es la pseudoinversa de X transpuesta
         
-        Vt = resolver_sistema_matricial(traspuesta(L), Z)
+        Vt = res_tri_mat(traspuesta(L), Z)
         U = traspuesta(Vt)   #pseudoinversa de X
 
         #Finalmente calculamos W = Y U donde U es la pseudoinversa
@@ -1075,14 +1084,6 @@ def pinvEcuacionesNormales(X, _, Y):        #Recibe X, L y Y, devuelve W solucio
         W = productoMatricial(Y, X_inv)
         return W
     
-
-
-def resolver_sistema_matricial(L, B):           #Crea una matriz Z solucion del sistema columna a columna, resolviendo L zi = bi en cada paso (L debe ser triangular)
-    Z = np.zeros((L.shape[0], B.shape[1]))
-    for i in range(B.shape[1]):
-        Z[:, i] = res_tri(L, B[:, i])
-    return Z
-
 
 # 3. Descomposicion en Valores singulares  
 
@@ -1140,7 +1141,7 @@ def pinvGramSchmidt(Q, R, Y):
     #Esto es un sistema matricial triangular superior
 
     Qt = traspuesta(Q)
-    Vt = res_tri_sup_mat(R, Qt)     #La explicacion de esta funcion esta en "Auxiliares.py"
+    Vt = res_tri_mat(R, Qt)     #La explicacion de esta funcion esta en "Auxiliares.py"
 
     #Trasponemos para recuperar V
     V = traspuesta(Vt)
@@ -1170,7 +1171,7 @@ def pinvHouseHolder(Q, R, Y):
     Qt = traspuesta(Q_util) 
 
     #Luego como antes resolvemos el sistema triangular superior R_util @ Vt = Qt
-    Vt = res_tri_sup_mat(R_util, Qt)
+    Vt = res_tri_mat(R_util, Qt)
 
     V = traspuesta(Vt)
 

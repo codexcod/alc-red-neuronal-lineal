@@ -138,6 +138,12 @@ def resolver_sistema_matricial(L, B):           #Crea una matriz Z solucion del 
         Z[:, i] = alc.res_tri(L, B[:, i])
     return Z
 
+def resolver_sistema_matricialOP(L, B):           #Crea una matriz Z solucion del sistema columna a columna, resolviendo L zi = bi en cada paso (L debe ser triangular)
+    Z = np.zeros((L.shape[0], B.shape[1]))        # (optimizado)  
+    for i in range(B.shape[1]):
+        Z[:, i] = np.linalg.solve(L, B[:, i])
+    return Z
+
 
 #--------------------------------------------------------------------------------
 
