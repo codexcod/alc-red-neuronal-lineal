@@ -94,3 +94,36 @@ def QR_con_GS_MatRectangular(A, tol=1e-12, nops=False):
         return Q, R, operaciones
     else:
         return Q, R
+
+
+#Algoritmo para armar la matriz de confusion, con accuracy
+
+W = #METODO CORRESPONDIENTE
+
+print("Matriz W:\n", W)
+
+#Ahora quiero ver que tanto se parece W @ Xv a Yv
+
+Yv_pred = W @ Xv
+
+#Separo por clases
+
+pred = np.argmax(Yv_pred, axis=0)
+true = np.argmax(Yv, axis=0)
+
+print("True labels:", true)
+print("Pred labels:", pred)
+
+accuracy = np.mean(pred == true)
+print("Accuracy:", accuracy)
+
+
+def confusion_matrix(true, pred, num_classes):
+    M = np.zeros((num_classes, num_classes), dtype=int)
+    for t, p in zip(true, pred):
+        M[t, p] += 1
+    return M
+
+cm = confusion_matrix(true, pred, num_classes=2)
+print("Confusion matrix:\n", cm)
+
