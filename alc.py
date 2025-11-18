@@ -619,13 +619,8 @@ def productoMatricial(A,B):
     
     if m!=m2 : return None
     
-    R = np.zeros((n,l))
-    
-    for i in range(n):
-        for j in range(l):
-            for k in range(m):
-                R[i, j] += A[i, k] * B[k, j]
-    return R
+    # Usa BLAS a través de NumPy para una multiplicación eficiente
+    return A @ B
 
 def transformacionF(A, v):
     
@@ -696,8 +691,8 @@ def diagRH(A, tol=1e-15,K=1000):
     n,m = A.shape 
     if n!= m : return None
     
-    v1 = metpot2k(A,tol,K)[0]
-    lambda1 = metpot2k(A,tol,K)[1]
+    # Power method una sola vez (autovector y autovalor dominante)
+    v1, lambda1, _ = metpot2k(A, tol, K)
     e1 = np.zeros(n)
     e1[0] = 1 
     
@@ -825,9 +820,12 @@ def svd_reducida(A, k="max", tol=1e-6):
         Ad = productoMatricial(A, traspuesta(A))    #Caso m < n, calculo primero U
         modo = "U"
     
+    print("ante nashe")
+
     #diagonalizo la que convenga
     S, D = diagRH(Ad, tol)
     
+    print("nashe")
     
     sigmas = np.zeros(D.shape[0])   #calculo los VS
     for i in range(D.shape[0]):
@@ -844,7 +842,7 @@ def svd_reducida(A, k="max", tol=1e-6):
         sigmas = sigmas[:k]
         S = S[:, :k]
 
-    
+    print("nashe2")
     if modo == "V":     #Si tengo V, calculo U
         hatV = S
         B = productoMatricial(A, hatV)
