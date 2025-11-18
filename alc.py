@@ -827,13 +827,11 @@ def svd_reducida(A, k="max", tol=1e-6):
     else:
         Ad = productoMatricial(A, traspuesta(A))    #Caso m < n, calculo primero U
         modo = "U"
-    
-    print("ante nashe")
+
 
     #diagonalizo la que convenga
     S, D = diagRH(Ad, tol)
     
-    print("nashe")
     
     sigmas = np.zeros(D.shape[0])   #calculo los VS
     for i in range(D.shape[0]):
@@ -850,7 +848,6 @@ def svd_reducida(A, k="max", tol=1e-6):
         sigmas = sigmas[:k]
         S = S[:, :k]
 
-    print("nashe2")
     if modo == "V":     #Si tengo V, calculo U
         hatV = S
         B = productoMatricial(A, hatV)
