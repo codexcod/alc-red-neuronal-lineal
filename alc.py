@@ -1053,7 +1053,7 @@ def pinvEcuacionesNormales(X, _, Y):        #Recibe X, L y Y, devuelve W solucio
 
         #luego resolvemos Lt U = Z con sustitucion atras (Lt es triangular superior) donde U es la pseudoinversa de X
 
-        U = res_tri_mat(traspuesta(L),Z)
+        U = res_tri_sup_mat(traspuesta(L), Z)
 
         #Finalmente calculamos W = Y U donde U es la pseudoinversa 
         W = productoMatricial(Y, U)   # WX = Y  -> W = Y @ X+
@@ -1071,7 +1071,7 @@ def pinvEcuacionesNormales(X, _, Y):        #Recibe X, L y Y, devuelve W solucio
 
         #luego resolvemos Lt Vt = Z con sustitucion atras (Lt es triangular superior) donde Vt es la pseudoinversa de X transpuesta
         
-        Vt = res_tri_mat(traspuesta(L), Z)
+        Vt = res_tri_sup_mat(traspuesta(L), Z)
         U = traspuesta(Vt)   #pseudoinversa de X
 
         #Finalmente calculamos W = Y U donde U es la pseudoinversa
