@@ -618,6 +618,14 @@ def productoMatricial(A,B):
     m2, l = B.shape 
     
     if m!=m2 : return None
+
+    #R = np.zeros((n,l))
+    
+    #for i in range(n):
+    #    for j in range(l):
+    #        for k in range(m):
+    #            R[i, j] += A[i, k] * B[k, j]
+    #return R
     
     # Usa BLAS a través de NumPy para una multiplicación eficiente
     return A @ B
