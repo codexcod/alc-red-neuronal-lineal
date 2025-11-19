@@ -1067,7 +1067,7 @@ def pinvEcuacionesNormales(X, _, Y):        #Recibe X, L y Y, devuelve W solucio
         #Cada columna de Z es resultado de resolver L zi = xi (xi es columna de Xt) 
 
         L = calculaCholesky(productoMatricial(X , traspuesta(X))) 
-        Z = res_tri_mat(L, X)
+        Z = res_tri_sup_mat(L, X)
 
         #luego resolvemos Lt Vt = Z con sustitucion atras (Lt es triangular superior) donde Vt es la pseudoinversa de X transpuesta
         
