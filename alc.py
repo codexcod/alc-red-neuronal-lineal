@@ -872,7 +872,7 @@ def svd_reducida(A, k="max", tol=1e-6):
 
 
 # ------------------------------
-# Auxiliares.py
+# Funciones auxiliares que  usaremos a lo largo del TP
 # ------------------------------
 #Funcion auxiliar que concatena dos matrices que tienen misma cantidad de filas
 #es decir "pega" una al lado de la otra
@@ -975,7 +975,7 @@ def QR_con_GS_MatRectangular(A, tol=1e-12, nops=False):
 
 
 # ------------------------------
-# Funciones movidas desde mainScript.py (solo funciones, no código de ejecución)
+# Funciones pedidas en el TP
 # ------------------------------
 # 1. Lectura de Datos 
 
