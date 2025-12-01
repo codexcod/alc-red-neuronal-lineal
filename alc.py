@@ -431,14 +431,16 @@ def inversa(A):
 #o DV = U .
 
 def calculaLDV(A):
-    L = calculaLU(A)[0]   
-    U = calculaLU(A)[1]
+    LU = calculaLU(A)
+    L = LU[0]
+    U = LU[1]
     
-    L2 = calculaLU(traspuesta(U))[0] #V traspuesta
-    U2 = calculaLU(traspuesta(U))[1] #D
+    LU2 = calculaLU(traspuesta(U))  # LU sobre U^t
+    L2 = LU2[0]  # V^t
+    U2 = LU2[1]  # D^t
     
-    D = traspuesta(U2) #Diagonal (no cambia)
-    V = traspuesta(L2) #Traspuesta de V traspuesta (queda V)
+    D = traspuesta(U2)  # Diagonal (no cambia)
+    V = traspuesta(L2)  # Traspuesta de V^t (queda V)
     
     return L, D, V
 
@@ -464,7 +466,7 @@ def esSDP(A, atol=1e-8):
     D = calculaLDV(A)[1]
     
     for i in range(n):
-        if D[i][i] <= 0 : return False
+        if D[i][i] <= atol : return False
     
     return True
 
@@ -1036,7 +1038,7 @@ def cargarDataset(carpeta):
 #Vamos a aprovechar la factorizacion de Cholesky con L triangular para resolver varios sistemas
 #No seria conveniente calcular la inversa directamente ya que tomaria mucho tiempo y puede ser inestable numericamente 
 
-def pinvEcuacionesNormales(X, _, Y):        #Recibe X, L y Y, devuelve W solucion del problema minW ||Y - WX||^2
+def pinvEcuacionesNormales(X, L, Y):        #Recibe X, L (opcional) y Y, devuelve W solucion del problema minW ||Y - WX||^2
     n = X.shape[0]
     p = X.shape[1]
         
@@ -1046,10 +1048,11 @@ def pinvEcuacionesNormales(X, _, Y):        #Recibe X, L y Y, devuelve W solucio
         #primero resolvemos L Z = Xt con sustitucion adelante (L es triangular inferior)
         #Cada columna de Z es resultado de resolver L zi = xi (xi es columna de Xt)
 
-        L = calculaCholesky(productoMatricial(traspuesta(X), X))
+        if L is None:
+            L = calculaCholesky(productoMatricial(traspuesta(X), X))
 
 
-        Z = res_tri_sup_mat(L,traspuesta(X))   
+        Z = res_tri_mat(L, traspuesta(X))   
 
         #luego resolvemos Lt U = Z con sustitucion atras (Lt es triangular superior) donde U es la pseudoinversa de X
 
@@ -1066,8 +1069,9 @@ def pinvEcuacionesNormales(X, _, Y):        #Recibe X, L y Y, devuelve W solucio
         #primero resolvemos L Z = X con sustitucion adelante (L es triangular inferior)
         #Cada columna de Z es resultado de resolver L zi = xi (xi es columna de Xt) 
 
-        L = calculaCholesky(productoMatricial(X , traspuesta(X))) 
-        Z = res_tri_sup_mat(L, X)
+        if L is None:
+            L = calculaCholesky(productoMatricial(X , traspuesta(X))) 
+        Z = res_tri_mat(L, X)
 
         #luego resolvemos Lt Vt = Z con sustitucion atras (Lt es triangular superior) donde Vt es la pseudoinversa de X transpuesta
         
