@@ -1,0 +1,19 @@
+Correcciones:
+
+Notebook:
+  -Se ejecutaron las celdas de funciones que no habian compilado
+
+Modulo ALC:
+  -Se modifico la funcion calculaLDV, que calculaba LU dos veces innecesariamente.
+  -En la funcion esSDP, el chequeo sobre D ahora incluye tambien la tolerancia.
+
+Funciones del TP:
+  -Ahora la funcion pinvEcuacionesNormales recibe a L como parametro, que es previamente calculada segun la forma que tenga Xt
+  -Ahora en la funcion pinvEcuacionesNormales, en el caso donde L es triangular inferior, se utiliza la funcion res_tri_mat, que resuelve para cada columna del resultado un sistema triangular 
+  mediante la funcion res_tri, la cual chequea si el sistema es triangular inferior o superior. Para L triangular superior se mantiene la funcion res_tri_sup_mat.
+
+Analisis/sintesis:
+  - Se agrega un grafico de tomando el eje X como tamaño de la muestra y el eje Y como tiempo de ejecucion para observar la evolucion de los programas segun aumenta la cantidad de informacion
+  utilizada.
+  
+  
