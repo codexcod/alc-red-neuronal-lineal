@@ -1038,21 +1038,34 @@ def cargarDataset(carpeta):
 #Vamos a aprovechar la factorizacion de Cholesky con L triangular para resolver varios sistemas
 #No seria conveniente calcular la inversa directamente ya que tomaria mucho tiempo y puede ser inestable numericamente 
 
-def pinvEcuacionesNormales(X, L, Y):        #Recibe X, L (opcional) y Y, devuelve W solucion del problema minW ||Y - WX||^2
-    n = X.shape[0]
-    p = X.shape[1]
+
+
+n = Xt.shape[0]
+p = Xt.shape[1]
         
-    if n > p: #caso n > p
+if n > p: #caso n > p
         #Queremos resolver el sistema (XtX) U = Xt usando la factorizacion de Cholesky XtX = LLt
+        
+
+        
+    L = calculaCholesky(productoMatricial(traspuesta(Xt), Xt))
+
+if n < p:   #caso n < p 
+        #Queremos resolver el sistema V(XXt) = Xt usando la factorizacion de Cholesky XXt = LLt
+         
+
+    L = calculaCholesky(productoMatricial(Xt , traspuesta(Xt)))    
+
+
+def pinvEcuacionesNormales(X, L, Y):        #Recibe X, L  y Y, devuelve W solucion del problema minW ||Y - WX||^2
+        
+    if n > p:
+
         #nos queda el sistema LLt U = Xt. Llamo Z = Lt U
         #primero resolvemos L Z = Xt con sustitucion adelante (L es triangular inferior)
         #Cada columna de Z es resultado de resolver L zi = xi (xi es columna de Xt)
-
-        if L is None:
-            L = calculaCholesky(productoMatricial(traspuesta(X), X))
-
-
-        Z = res_tri_mat(L, traspuesta(X))   
+            
+        Z = res_tri_mat(L, traspuesta(Xt))   
 
         #luego resolvemos Lt U = Z con sustitucion atras (Lt es triangular superior) donde U es la pseudoinversa de X
 
@@ -1063,14 +1076,11 @@ def pinvEcuacionesNormales(X, L, Y):        #Recibe X, L (opcional) y Y, devuelv
         
         return W
     
-    if n < p:   #caso n < p 
-        #Queremos resolver el sistema V(XXt) = Xt usando la factorizacion de Cholesky XXt = LLt
-        #nos queda el sistema V LLt = X. Si transponemos queda LLt Vt = Xt. Llamo Z = Lt Vt 
-        #primero resolvemos L Z = X con sustitucion adelante (L es triangular inferior)
-        #Cada columna de Z es resultado de resolver L zi = xi (xi es columna de Xt) 
 
-        if L is None:
-            L = calculaCholesky(productoMatricial(X , traspuesta(X))) 
+    if n < p:
+        #nos queda el sistema LLt Vt = X. Llamo Z = Lt Vt
+        #primero resolvemos L Z = X con sustitucion adelante (L es triangular inferior)
+
         Z = res_tri_mat(L, X)
 
         #luego resolvemos Lt Vt = Z con sustitucion atras (Lt es triangular superior) donde Vt es la pseudoinversa de X transpuesta
