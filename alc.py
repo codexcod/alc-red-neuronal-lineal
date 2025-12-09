@@ -1038,7 +1038,7 @@ def cargarDataset(carpeta):
 #Vamos a aprovechar la factorizacion de Cholesky con L triangular para resolver varios sistemas
 #No seria conveniente calcular la inversa directamente ya que tomaria mucho tiempo y puede ser inestable numericamente 
 
-
+Xt = cargarDataset("cats_and_dogs")[0]   #cargamos solo Xt para este punto, para definir L adecuadamente
 
 n = Xt.shape[0]
 p = Xt.shape[1]
@@ -1065,7 +1065,7 @@ def pinvEcuacionesNormales(X, L, Y):        #Recibe X, L  y Y, devuelve W soluci
         #primero resolvemos L Z = Xt con sustitucion adelante (L es triangular inferior)
         #Cada columna de Z es resultado de resolver L zi = xi (xi es columna de Xt)
             
-        Z = res_tri_mat(L, traspuesta(Xt))   
+        Z = res_tri_mat(L, traspuesta(X))   #traspuesta(X) es Xt
 
         #luego resolvemos Lt U = Z con sustitucion atras (Lt es triangular superior) donde U es la pseudoinversa de X
 
